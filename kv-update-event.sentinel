@@ -1,0 +1,36 @@
+import "http"
+
+
+param MONITORING_ADDR default "http://127.0.0.1:9200"
+param KVEVENT default "KV-WAS-UPDATED"
+
+# Print some information about the request
+# Note that these messages will only be printed when the policy is violated
+print("Namespace path:", namespace.path)
+print("Request path:", request.path)
+print("Request data:", request.data)
+print("Request operation:", request.operation)
+
+
+update_event = func() {
+
+	# Debug data
+	print("DATA:", request.data.data)
+  req = http.request(MONITORING_ADDR).
+                      with_header("X-Vault-Event", KVEVENT).
+                      with_header("X-Vault-Path",request.path)
+  resp = http.get(req)
+	return true
+}
+
+# Main rule
+# Rule applies to creating/updating/patching K/V pairs
+precond = rule {
+	request.operation in ["create", "update"]
+}
+
+# Main rule
+#
+main = rule when precond {
+	 update_event()
+}
